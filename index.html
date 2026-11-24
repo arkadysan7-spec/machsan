@@ -68,7 +68,7 @@ const AU=new Audio('music.mp3');AU.preload='none';let mt=null,on=false;
 AU.addEventListener('ended',()=>{if(on)mt=setTimeout(()=>{if(on)AU.play().catch(()=>{})},15000)});
 function setUI(p){$('mBtn').textContent=p?'❚❚':'▶';$('mTxt').textContent=p?'מתנגן…':'מוזיקה?';$('mus').classList.toggle('on',p)}
 $('mBtn').onclick=()=>{if(on){on=false;clearTimeout(mt);AU.pause();setUI(false)}else{on=true;AU.currentTime=0;AU.play().then(()=>setUI(true)).catch(()=>{on=false;$('mTxt').textContent='לא הצלחנו לנגן'})}};
-$('send').onclick=()=>{const v=$('msg').value.trim();if(!v)return;$('send').disabled=true;
+$('send').onclick=()=>{const v=$('msg').value.trim();if(!v)return;if(!on)$('mBtn').click();$('send').disabled=true;
  pub({title:'הודעה מהמחסן',message:v,actions:acts}).then(r=>{if(!r.ok)throw 0;$('msg').value='';$('send').textContent='נשלח ✓';setTimeout(()=>{$('send').textContent='שלח';$('send').disabled=false},1500)}).catch(()=>{$('send').disabled=false;$('send').textContent='נסו שוב'})};
 }
 </script></body></html>
