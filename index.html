@@ -5,7 +5,7 @@
 :root{--bg:#fff;--ink:#121212;--mute:#6b6b6b;--red:#e3342f;--card:#f4f4f1}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:17px/1.5 Rubik,system-ui,sans-serif;display:flex;flex-direction:column}
-header{background:#121212;color:#fff;padding:18px 20px}
+header{background:#e3342f;color:#fff;padding:18px 20px}
 header small{opacity:.7;font-size:14px}
 main{flex:1;padding:24px 20px;max-width:520px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 h1{font-size:clamp(28px,8vw,40px);line-height:1.1;margin:4px 0 0}
@@ -13,8 +13,9 @@ h1{font-size:clamp(28px,8vw,40px);line-height:1.1;margin:4px 0 0}
 .dot{width:18px;height:18px;border-radius:50%;background:var(--red);flex:none;animation:p 1.4s infinite}
 @keyframes p{50%{opacity:.25}}
 .status.done .dot{animation:none;background:#121212}
+.closed{background:#fff;border:3px solid #e3342f;border-radius:18px;padding:22px}.closed b{display:block;font-size:22px;margin-bottom:6px}
 .status b{display:block;font-size:20px}
-.reply{display:none;background:#121212;color:#fff;border-radius:18px;padding:24px}
+.reply{display:none;background:#e3342f;color:#fff;border-radius:18px;padding:24px}
 .reply.on{display:block}
 .reply small{opacity:.7}
 .reply p{font-size:clamp(26px,7vw,34px);font-weight:700;margin:6px 0 0;line-height:1.2}
@@ -44,6 +45,8 @@ const acts=[
  {action:'http',label:'בדרך, 5 דק׳',url:H+R,method:'POST',body:'בדרך – מגיע תוך 5 דקות',clear:true},
  {action:'view',label:'כתוב תשובה',url:H+R}];
 function pub(o){return fetch(H,{method:'POST',body:JSON.stringify(Object.assign({topic:T,priority:5,tags:['bell']},o))})}
+const nowD=new Date(),il=new Date(nowD.toLocaleString('en-US',{timeZone:'Asia/Jerusalem'})),dw=il.getDay(),hr=il.getHours();
+if(dw>4||hr<9||hr>=13){document.querySelector('main').innerHTML='<div class="closed"><b>הקריאה זמינה א׳–ה׳, 9:00 עד 13:00</b>מ־13:00 עדנאן במחסן – פנו אליו ישירות.</div>';document.querySelector('header h1').textContent='המחסן סגור לקריאות כרגע';throw 0}
 let last=0;try{last=+sessionStorage.getItem('called')||0}catch(e){}
 const fresh=Date.now()-last<120000;
 (fresh?Promise.resolve({ok:true}):pub({title:'קוראים לך למחסן',message:'מישהו סרק את הברקוד במחסן הציוד',actions:acts}))
