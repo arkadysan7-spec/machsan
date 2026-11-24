@@ -40,7 +40,7 @@ button:disabled{opacity:.5}
 <div class="reply" id="rep"><small>תשובה מעובד המחסן</small><p id="repT"></p></div>
 <div><label for="msg" style="font-size:18px;color:#121212;font-weight:500">מה צריך? כתבו בקצרה</label>
 <div class="row"><input id="msg" maxlength="140" placeholder="למשל: דנה – באתי להחזיר מצלמה"><button id="send">שלח</button></div></div>
-<div class="music" id="mus"><button id="mBtn" aria-label="הפעל מוזיקה">▶</button><span id="mTxt">מוזיקה בזמן ההמתנה</span><span class="eq"><i></i><i></i><i></i><i></i></span></div>
+<div class="music" id="mus"><button id="mBtn" aria-label="הפעל מוזיקה">▶</button><span id="mTxt">מוזיקה?</span><span class="eq"><i></i><i></i><i></i><i></i></span></div>
 <p class="hint">השאירו את הדף פתוח – התשובה תופיע כאן.</p>
 </main>
 <script>
@@ -64,77 +64,10 @@ const fresh=Date.now()-last<120000;
 function show(t){$('repT').textContent=t;$('rep').classList.add('on');$('st').classList.add('done');$('stT').textContent='עובד המחסן ענה'; $('stS').textContent=''}
 try{const es=new EventSource(H+R+'/sse?since='+(fresh?Math.floor(last/1000)-2:since));
  es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.event==='message'&&m.message)show(m.message)}catch(x){}}}catch(e){}
-function buildScore(AC,OUT,t0){
-const B=0.6,S=B/4,BAR=B*4;
-const f=m=>440*Math.pow(2,(m-69)/12);
-const nb=(()=>{const n=AC.sampleRate*2,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;return b})();
-const env=(g,t,a,p,dec)=>{g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(p,t+a);g.gain.exponentialRampToValueAtTime(0.0001,t+a+dec)};
-const nz=(t,type,fr,q,p,dec)=>{const s=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();s.buffer=nb;fl.type=type;fl.frequency.value=fr;fl.Q.value=q;env(g,t,.002,p,dec);s.connect(fl).connect(g).connect(OUT);s.start(t,Math.random()*1.5);s.stop(t+dec+.05)};
-const kick=(t,v=1)=>{const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(42,t+.18);env(g,t,.003,.9*v,.42);o.connect(g).connect(OUT);o.start(t);o.stop(t+.5)};
-const snare=(t,v=1)=>{nz(t,'highpass',1500,.7,.45*v,.2);const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(160,t+.08);env(g,t,.002,.25*v,.1);o.connect(g).connect(OUT);o.start(t);o.stop(t+.15)};
-const hat=(t,v=1,open)=>nz(t,'highpass',7500,.8,.16*v,open?.22:.035);
-const tick=(t,hi,v=1)=>nz(t,'bandpass',hi?5200:3100,9,.95*v,.03);
-const tom=(t,p=1,v=1)=>{const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(150*p,t);o.frequency.exponentialRampToValueAtTime(75*p,t+.25);env(g,t,.003,.6*v,.35);o.connect(g).connect(OUT);o.start(t);o.stop(t+.4)};
-const crash=t=>nz(t,'highpass',4000,.5,.25,2.2);
-const tone=(type,n,t,len,v,cut)=>{const o=AC.createOscillator(),g=AC.createGain(),fl=AC.createBiquadFilter();o.type=type;o.frequency.value=f(n);fl.type='lowpass';fl.frequency.value=cut;env(g,t,.008,v,len);o.connect(fl).connect(g).connect(OUT);o.start(t);o.stop(t+len+.05)};
-const bass=(n,t,len,v=.3)=>{tone('sawtooth',n,t,len,v,420);tone('sine',n-12,t,len,v*.6,200)};
-const keys=(n,t,v=.16)=>{tone('triangle',n,t,1.6,v,3000);tone('sine',n+12,t,1.0,v*.35,4000)};
-const pad=(ns,t,dur,v=.04)=>ns.forEach(n=>[-7,7].forEach(d=>{const o=AC.createOscillator(),g=AC.createGain(),fl=AC.createBiquadFilter();o.type='sawtooth';o.frequency.value=f(n);o.detune.value=d;fl.type='lowpass';fl.frequency.value=1100;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+Math.min(1.2,dur/2));g.gain.setValueAtTime(v,t+dur-.3);g.gain.linearRampToValueAtTime(0,t+dur+.8);o.connect(fl).connect(g).connect(OUT);o.start(t);o.stop(t+dur+1)}));
-const lead=(n,t,len,v=.11)=>{const o=AC.createOscillator(),g=AC.createGain(),fl=AC.createBiquadFilter(),lf=AC.createOscillator(),lg=AC.createGain();o.type='square';o.frequency.value=f(n);fl.type='lowpass';fl.frequency.setValueAtTime(1200,t);fl.frequency.linearRampToValueAtTime(2600,t+len*.5);lf.frequency.value=5.5;lg.gain.value=7;lf.connect(lg).connect(o.detune);g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(v,t+.03);g.gain.setValueAtTime(v,t+len*.8);g.gain.linearRampToValueAtTime(0.0001,t+len+.15);o.connect(fl).connect(g).connect(OUT);o.start(t);lf.start(t);o.stop(t+len+.2);lf.stop(t+len+.2)};
-const riser=(t,d)=>{const s=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();s.buffer=nb;s.loop=true;fl.type='bandpass';fl.Q.value=3;fl.frequency.setValueAtTime(300,t);fl.frequency.exponentialRampToValueAtTime(7000,t+d);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.3,t+d);s.connect(fl).connect(g).connect(OUT);s.start(t);s.stop(t+d)};
-const CH={Dm:[50,53,57],Bb:[50,53,58],F:[48,53,57],C:[48,52,55],Am:[48,52,57],Gm:[50,55,58],A:[49,52,57]};
-const RT={Dm:38,Bb:34,F:41,C:36,Am:33,Gm:43,A:33};
-let t=t0;
-// A — intro: a clock ticking, a chord breathing
-pad(CH.Dm,t,BAR*4,.06);
-for(let i=0;i<32;i++)tick(t+i*B/2,i%2===0,i%2?.6:.9);
-[[74,2],[69,3],[77,4],[76,5],[74,6],[72,7]].forEach(([n,b])=>keys(n,t+BAR*2+(b-2)*B,.22));
-[0,1,2,3].forEach(i=>tom(t+BAR*3+B*3+i*S,1.4-i*.15,.7));
-t+=BAR*4;
-// B — the drive
-const bP=['Dm','Bb','F','C','Gm','A'];
-bP.forEach((c,bi)=>{const T=t+bi*BAR;pad(CH[c],T,BAR,.025);
- for(let s=0;s<16;s++){const x=T+s*S;hat(x,s%2?.55:1);
-  if(s===0||s===6||s===8||s===11)kick(x,s===0?1:.8);
-  if(s===4||s===12)snare(x);
-  if(s%2===0)bass(RT[c]+(s===14?12:0),x,S*1.6)}
- if(bi===5){[8,9,10,11,12,13,14,15].forEach((s,i)=>tom(T+s*S,1.5-i*.1,.6+i*.05))}});
-t+=BAR*6;
-// C — the ballad turn
-const cP=['F','Am','Bb','C','Dm'];
-cP.forEach((c,bi)=>{const T=t+bi*BAR,ch=CH[c];pad(ch,T,BAR,.05);bass(RT[c],T,BAR*.95,.26);
- const ar=[ch[0]+12,ch[1]+12,ch[2]+12,ch[1]+24,ch[2]+12,ch[1]+12,ch[0]+12,ch[2]];ar.forEach((n,i)=>keys(n,T+i*B/2,.2));
- for(let q=0;q<4;q++)tick(T+q*B,q%2===0,.6)});
-const RT0=t+BAR*4;riser(RT0,BAR);
-for(let i=0;i<16;i++){const x=RT0+BAR*(1-Math.pow(1-i/16,1.6));snare(x,.25+i*.045)}
-t+=BAR*5;
-// D — climax
-crash(t);kick(t,1.2);
-const dP=['Dm','Bb','Gm','A','Dm','Bb','A'];
-const mel=[[[74,1],[77,.5],[81,.5],[86,2]],[[84,.5],[82,.5],[81,1],[77,2]],[[79,1],[82,1],[86,1],[84,1]],[[85,2],[88,1],[81,1]],[[86,1],[89,1],[88,.5],[86,.5],[84,1]],[[82,1],[81,1],[79,1],[77,1]],[[76,2],[73,1],[69,1]]];
-dP.forEach((c,bi)=>{const T=t+bi*BAR;pad(CH[c],T,BAR,.035);
- for(let s=0;s<16;s++){const x=T+s*S;hat(x,s%2?.6:1,s%4===2);
-  if(s%4===0||s===14)kick(x);
-  if(s===4||s===12)snare(x,1.1);
-  bass(RT[c]+(s%4===3?12:0),x,S*.9,.26)}
- let b=0;mel[bi].forEach(([n,d])=>{lead(n,T+b*B,d*B*.95);b+=d});
- if(bi===6)[8,9,10,11,12,13,14,15].forEach((s,i)=>tom(T+s*S,1.6-i*.12,.7+i*.04))});
-t+=BAR*7;
-// E — outro: the clock winds down
-crash(t);kick(t,1.1);pad(CH.Dm,t,BAR*2.6,.06);
-[[62,0],[69,.8],[74,1.6],[77,2.6],[74,4]].forEach(([n,d])=>keys(n,t+d,.22));
-let x=t+.3,iv=.3;while(x<t+BAR*3-.2){tick(x,Math.round((x-t)/iv)%2===0,.7);x+=iv;iv*=1.13}
-return BAR*25;
-}
-
-let AC=null,MG=null,mt=null;
-function startMusic(){AC=new (window.AudioContext||window.webkitAudioContext)();MG=AC.createGain();MG.gain.value=.42;
-const cmp=AC.createDynamicsCompressor();cmp.threshold.value=-14;cmp.ratio.value=3;
-const len=AC.sampleRate*2.5,ir=AC.createBuffer(2,len,AC.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3)}
-const rv=AC.createConvolver();rv.buffer=ir;const wet=AC.createGain();wet.gain.value=.22;MG.connect(cmp);MG.connect(rv).connect(wet).connect(cmp);cmp.connect(AC.destination);
-const loop=()=>{const d=buildScore(AC,MG,AC.currentTime+.15);mt=setTimeout(loop,(d+15)*1000)};loop()}
-function stopMusic(){if(!AC)return;clearTimeout(mt);const a=AC;MG.gain.linearRampToValueAtTime(0,a.currentTime+.8);setTimeout(()=>a.close(),1000);AC=null}
-$('mBtn').onclick=()=>{try{if(AC){stopMusic();$('mBtn').textContent='▶';$('mTxt').textContent='מוזיקה בזמן ההמתנה';$('mus').classList.remove('on')}else{startMusic();$('mBtn').textContent='❚❚';$('mTxt').textContent='מתנגן…';$('mus').classList.add('on')}}catch(e){$('mTxt').textContent='המכשיר לא תומך בנגינה'}};
+const AU=new Audio('music.mp3');AU.preload='none';let mt=null,on=false;
+AU.addEventListener('ended',()=>{if(on)mt=setTimeout(()=>{if(on)AU.play().catch(()=>{})},15000)});
+function setUI(p){$('mBtn').textContent=p?'❚❚':'▶';$('mTxt').textContent=p?'מתנגן…':'מוזיקה?';$('mus').classList.toggle('on',p)}
+$('mBtn').onclick=()=>{if(on){on=false;clearTimeout(mt);AU.pause();setUI(false)}else{on=true;AU.currentTime=0;AU.play().then(()=>setUI(true)).catch(()=>{on=false;$('mTxt').textContent='לא הצלחנו לנגן'})}};
 $('send').onclick=()=>{const v=$('msg').value.trim();if(!v)return;$('send').disabled=true;
  pub({title:'הודעה מהמחסן',message:v,actions:acts}).then(r=>{if(!r.ok)throw 0;$('msg').value='';$('send').textContent='נשלח ✓';setTimeout(()=>{$('send').textContent='שלח';$('send').disabled=false},1500)}).catch(()=>{$('send').disabled=false;$('send').textContent='נסו שוב'})};
 }
