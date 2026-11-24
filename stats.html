@@ -14,6 +14,7 @@ main{max-width:900px;margin:0 auto;padding:18px max(4vw,16px) 40px}
 .bar button{font:inherit;min-height:44px;padding:0 16px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer}
 .bar button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
 .bar .upd{margin-inline-start:auto;color:var(--mute);font-size:13px}
+.newb{display:none;background:var(--red);color:#fff;border-radius:14px;padding:14px 16px;margin-bottom:14px;align-items:center;gap:12px;flex-wrap:wrap}.newb.on{display:flex}.newb b{font-size:20px}.newb button{margin-inline-start:auto;font:inherit;min-height:40px;padding:0 14px;border-radius:10px;border:0;background:#fff;color:var(--ink);cursor:pointer}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 .k{background:var(--card);border-radius:14px;padding:14px 16px}
 .k b{display:block;font-size:clamp(30px,6vw,40px);line-height:1.1;font-weight:700}
@@ -30,6 +31,7 @@ h2{font-size:19px;font-weight:500;margin:26px 0 10px}
 <header><img class="lg" src="logo.png" alt="מנשר לאמנות"><small>מחסן ציוד · שלט הקריאה</small><h1>מעקב סריקות</h1></header>
 <main>
 <div class="bar"><button data-r="1" aria-pressed="true">היום</button><button data-r="7">7 ימים</button><button data-r="30">30 ימים</button><button data-r="0">הכול</button><button id="ref">רענן</button><span class="upd" id="upd"></span></div>
+<div class="newb" id="newb"><div><b id="newT"></b><div id="newS" style="font-size:14px;opacity:.9"></div></div><button id="seen">ראיתי</button></div>
 <div class="kpis" id="kpis"></div>
 <h2>לפי יום</h2><div class="rows" id="days"></div>
 <h2>לפי שעה</h2><div class="rows" id="hours"></div>
@@ -43,7 +45,7 @@ const T='minshar-machsan-k7q3z9wp',H='https://ntfy.sh/',LS='machsan-stats-v1';
 const $=s=>document.getElementById(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let DB={};try{DB=JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){}
-let RANGE=1;
+let RANGE=1;let SEEN=0;try{SEEN=+localStorage.getItem('machsan-seen')||0}catch(e){}if(!SEEN){SEEN=Date.now()/1000;try{localStorage.setItem('machsan-seen',String(SEEN))}catch(e){}}let notified=SEEN;
 const NAMES={open:'סריקה',closed:'סריקה מחוץ לשעות',call:'קריאה נשלחה',note:'הודעה',reply:'ענית',music_play:'הפעילו מוזיקה',music_end:'שמעו עד הסוף'};
 async function pull(topic,kind){const r=await fetch(H+topic+'/json?poll=1&since=all');const t=await r.text();
  t.split('\n').forEach(l=>{if(!l.trim())return;let m;try{m=JSON.parse(l)}catch(e){return}if(m.event!=='message')return;
@@ -59,8 +61,11 @@ async function refresh(){$('upd').textContent='טוען…';
  render()}
 function ilDate(sec){return new Date(new Date(sec*1000).toLocaleString('en-US',{timeZone:'Asia/Jerusalem'}))}
 const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function alerts(all){const nw=all.filter(e=>e.t>SEEN&&(e.ev==='open'||e.ev==='closed'));const cl=nw.filter(e=>e.ev==='closed').length;
+ $('newb').classList.toggle('on',nw.length>0);$('newT').textContent=nw.length+(nw.length===1?' סריקה חדשה':' סריקות חדשות');$('newS').textContent=cl?cl+' מהן כשהמחסן סגור':'כולן בשעות הפעילות';
+ const fresh=all.filter(e=>e.t>notified&&(e.ev==='open'||e.ev==='closed'));if(fresh.length){notified=Math.max(...fresh.map(e=>e.t));try{if('Notification'in window&&Notification.permission==='granted')new Notification('מחסן – '+fresh.length+' סריקות חדשות',{body:fresh.some(e=>e.ev==='closed')?'כולל סריקה כשהמחסן סגור':'בשעות הפעילות'})}catch(e){}}}
 function render(){
- const all=Object.values(DB).sort((a,b)=>a.t-b.t);
+ const all=Object.values(DB).sort((a,b)=>a.t-b.t);alerts(all);
  const now=ilDate(Date.now()/1000),today=dk(now);
  const from=RANGE===0?0:(()=>{const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-(RANGE-1));return d})();
  const ev=all.filter(e=>!from||ilDate(e.t)>=from);
@@ -89,6 +94,7 @@ function render(){
  const feed=ev.slice(-25).reverse();
  $('feed').innerHTML=feed.length?feed.map(e=>{const d=ilDate(e.t);const nm=NAMES[e.ev.replace('_legacy','')]||e.ev;return`<li><time>${esc((dk(d)===today?'':d.getDate()+'.'+(d.getMonth()+1)+' ')+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'))}</time><span>${esc(nm)}${e.text?' – '+esc(e.text):''}${e.src&&e.src!=='machsan'?' ('+esc(SN[e.src]||e.src)+')':''}</span></li>`}).join(''):'<li>אין עדיין פעילות בטווח הזה</li>'}
 document.querySelector('.bar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='ref'){refresh();return}RANGE=+b.dataset.r;document.querySelectorAll('[data-r]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));render()});
+$('seen').onclick=()=>{SEEN=Date.now()/1000;try{localStorage.setItem('machsan-seen',String(SEEN))}catch(e){}render();try{if('Notification'in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}};
 render();refresh();setInterval(refresh,60000);
 }
 </script></body></html>
