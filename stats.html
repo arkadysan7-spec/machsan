@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>מעקב – קריאה למחסן</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#e3342f;--ink:#121212;--mute:#6b6b6b;--card:#f4f4f1;--line:#e3e3df}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif}
+header{background:var(--red);color:#fff;padding:18px max(4vw,16px) 22px}
+.lg{display:block;height:48px;background:#fff;border-radius:10px;padding:6px 10px}
+header small{display:block;margin-top:10px;opacity:.85;font-size:14px}
+h1{margin:2px 0 0;font-size:clamp(28px,6vw,40px);line-height:1.1}
+main{max-width:900px;margin:0 auto;padding:18px max(4vw,16px) 40px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.bar button{font:inherit;min-height:44px;padding:0 16px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer}
+.bar button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.bar .upd{margin-inline-start:auto;color:var(--mute);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.k{background:var(--card);border-radius:14px;padding:14px 16px}
+.k b{display:block;font-size:clamp(30px,6vw,40px);line-height:1.1;font-weight:700}
+.k span{color:var(--mute);font-size:14px}
+.k.main{background:var(--ink);color:#fff}.k.main span{color:#ccc}
+h2{font-size:19px;font-weight:500;margin:26px 0 10px}
+.rows div{display:grid;grid-template-columns:7.5em minmax(0,1fr) 3em;gap:10px;align-items:center;padding:4px 0;font-size:14px}
+.rows i{display:block;height:14px;border-radius:7px;background:var(--red)}
+.rows em{font-style:normal;text-align:left;font-variant-numeric:tabular-nums}
+.feed{list-style:none;margin:0;padding:0}.feed li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+.feed time{color:var(--mute);white-space:nowrap;font-variant-numeric:tabular-nums}
+.note{color:var(--mute);font-size:13px;margin-top:20px}
+</style></head><body>
+<header><img class="lg" src="logo.png" alt="מנשר לאמנות"><small>מחסן ציוד · שלט הקריאה</small><h1>מעקב סריקות</h1></header>
+<main>
+<div class="bar"><button data-r="1" aria-pressed="true">היום</button><button data-r="7">7 ימים</button><button data-r="30">30 ימים</button><button data-r="0">הכול</button><button id="ref">רענן</button><span class="upd" id="upd"></span></div>
+<div class="kpis" id="kpis"></div>
+<h2>לפי יום</h2><div class="rows" id="days"></div>
+<h2>לפי שעה</h2><div class="rows" id="hours"></div>
+<h2>מאיפה סרקו</h2><div class="rows" id="srcs"></div>
+<h2>פעילות אחרונה</h2><ul class="feed" id="feed"></ul>
+<p class="note">הנתונים נאספים מ־ntfy, ששומר היסטוריה של כ־12 שעות. הדף שומר כל מה שהוא רואה במכשיר הזה, אז כדאי לפתוח אותו לפחות פעם ביום כדי שלא ילכו נתונים לאיבוד. סריקות לפני 24.11 בערב נספרות רק לפי ההתראות שנשלחו.</p>
+</main>
+<script>
+{
+const T='minshar-machsan-k7q3z9wp',H='https://ntfy.sh/',LS='machsan-stats-v1';
+const $=s=>document.getElementById(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let DB={};try{DB=JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){}
+let RANGE=1;
+const NAMES={open:'סריקה',closed:'סריקה מחוץ לשעות',call:'קריאה נשלחה',note:'הודעה',reply:'ענית',music_play:'הפעילו מוזיקה',music_end:'שמעו עד הסוף'};
+async function pull(topic,kind){const r=await fetch(H+topic+'/json?poll=1&since=all');const t=await r.text();
+ t.split('\n').forEach(l=>{if(!l.trim())return;let m;try{m=JSON.parse(l)}catch(e){return}if(m.event!=='message')return;
+  let e={t:m.time};
+  if(kind==='stats'){try{const x=JSON.parse(m.message);e.ev=x.ev;e.src=x.src||'machsan';e.sid=x.sid}catch(_){return}}
+  else if(kind==='main'){if(m.title==='קוראים לך למחסן')e.ev='call_legacy';else if(m.title==='הודעה מהמחסן'){e.ev='note_legacy';e.text=m.message}else return}
+  else{e.ev='reply_legacy';e.text=m.message}
+  DB[m.id]=e})}
+async function refresh(){$('upd').textContent='טוען…';
+ try{await Promise.all([pull(T+'-stats','stats'),pull(T,'main'),pull(T+'-reply','reply')]);try{localStorage.setItem(LS,JSON.stringify(DB))}catch(e){}
+  $('upd').textContent='עודכן '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}
+ catch(e){$('upd').textContent='אין חיבור – מציג נתונים שמורים'}
+ render()}
+function ilDate(sec){return new Date(new Date(sec*1000).toLocaleString('en-US',{timeZone:'Asia/Jerusalem'}))}
+const dk=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function render(){
+ const all=Object.values(DB).sort((a,b)=>a.t-b.t);
+ const now=ilDate(Date.now()/1000),today=dk(now);
+ const from=RANGE===0?0:(()=>{const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-(RANGE-1));return d})();
+ const ev=all.filter(e=>!from||ilDate(e.t)>=from);
+ // legacy: before tracking existed, each call = a scan
+ const firstStats=all.find(e=>e.ev&&!e.ev.endsWith('_legacy'));const cut=firstStats?firstStats.t:Infinity;
+ const has=n=>ev.filter(e=>e.ev===n).length;
+ const legacyCalls=ev.filter(e=>e.ev==='call_legacy'&&e.t<cut).length;
+ const scans=has('open')+has('closed')+legacyCalls;
+ const calls=has('call')+legacyCalls;
+ const notes=has('note')+ev.filter(e=>e.ev==='note_legacy'&&e.t<cut).length;
+ const replies=has('reply')||ev.filter(e=>e.ev==='reply_legacy').length;
+ const people=new Set(ev.filter(e=>e.sid).map(e=>e.sid)).size;
+ const K=[['סריקות',scans,1],['אנשים שונים',people||'—'],['קריאות אליך',calls],['סרקו כשסגור (אחרי 13:00)',has('closed'),1],['הודעות',notes],['ענית',replies],['הפעילו מוזיקה',has('music_play')],['שמעו עד הסוף',has('music_end')]];
+ $('kpis').innerHTML=K.map(([n,v,m])=>`<div class="k${m?' main':''}"><b>${esc(v)}</b><span>${esc(n)}</span></div>`).join('');
+ const scanEv=ev.filter(e=>e.ev==='open'||e.ev==='closed'||(e.ev==='call_legacy'&&e.t<cut));
+ const bars=(el,map,keys,fmt)=>{const mx=Math.max(1,...keys.map(k=>map[k]||0));$(el).innerHTML=keys.map(k=>`<div><span>${esc(fmt(k))}</span><i style="width:${((map[k]||0)/mx*100).toFixed(1)}%"></i><em>${map[k]||0}</em></div>`).join('')||'<p class="note">אין עדיין נתונים</p>'};
+ const byDay={};scanEv.forEach(e=>{const k=dk(ilDate(e.t));byDay[k]=(byDay[k]||0)+1});
+ const nd=RANGE===0?Math.min(30,Math.max(1,Object.keys(byDay).length?Math.ceil((now-new Date(Object.keys(byDay).sort()[0]))/864e5)+1:1)):RANGE;
+ const days=[];for(let i=nd-1;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);days.push(dk(d))}
+ bars('days',byDay,days,k=>{const[y,m,d]=k.split('-');return(k===today?'היום ':'')+(+d)+'.'+(+m)});
+ const byH={};scanEv.forEach(e=>{const h=ilDate(e.t).getHours();byH[h]=(byH[h]||0)+1});
+ const hs=[];for(let h=8;h<=17;h++)hs.push(h);Object.keys(byH).forEach(h=>{if(!hs.includes(+h))hs.push(+h)});hs.sort((a,b)=>a-b);
+ bars('hours',byH,hs,h=>String(h).padStart(2,'0')+':00');
+ const SN={machsan:'שלט במחסן',door:'שלט בדלת'};const bySrc={};ev.filter(e=>e.ev==='open'||e.ev==='closed').forEach(e=>{bySrc[e.src]=(bySrc[e.src]||0)+1});
+ bars('srcs',bySrc,Object.keys(bySrc),k=>SN[k]||k);
+ const feed=ev.slice(-25).reverse();
+ $('feed').innerHTML=feed.length?feed.map(e=>{const d=ilDate(e.t);const nm=NAMES[e.ev.replace('_legacy','')]||e.ev;return`<li><time>${esc((dk(d)===today?'':d.getDate()+'.'+(d.getMonth()+1)+' ')+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'))}</time><span>${esc(nm)}${e.text?' – '+esc(e.text):''}${e.src&&e.src!=='machsan'?' ('+esc(SN[e.src]||e.src)+')':''}</span></li>`}).join(''):'<li>אין עדיין פעילות בטווח הזה</li>'}
+document.querySelector('.bar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='ref'){refresh();return}RANGE=+b.dataset.r;document.querySelectorAll('[data-r]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));render()});
+render();refresh();setInterval(refresh,60000);
+}
+</script></body></html>

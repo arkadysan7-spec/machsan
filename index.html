@@ -52,23 +52,27 @@ const acts=[
  {action:'http',label:'עולה',url:H+R,method:'POST',body:'עולה עכשיו!',clear:true},
  {action:'http',label:'בדרך, 5 דק׳',url:H+R,method:'POST',body:'בדרך – מגיע תוך 5 דקות',clear:true},
  {action:'view',label:'כתוב תשובה',url:H+R}];
+const SRC=(new URLSearchParams(location.search).get('src')||'machsan').slice(0,20).replace(/[^a-z0-9-]/gi,'');let sid='';try{sid=sessionStorage.getItem('sid')||Math.random().toString(36).slice(2,9);sessionStorage.setItem('sid',sid)}catch(e){sid=Math.random().toString(36).slice(2,9)}
+function trk(ev,x){try{fetch(H,{method:'POST',keepalive:true,body:JSON.stringify({topic:T+'-stats',priority:1,message:JSON.stringify(Object.assign({ev,src:SRC,sid},x||{}))})}).catch(()=>{})}catch(e){}}
 function pub(o){return fetch(H,{method:'POST',body:JSON.stringify(Object.assign({topic:T,priority:5,tags:['bell']},o))})}
 const nowD=new Date(),il=new Date(nowD.toLocaleString('en-US',{timeZone:'Asia/Jerusalem'})),dw=il.getDay(),hr=il.getHours();
-if(dw>4||hr<9||hr>=13){document.querySelector('main').innerHTML='<div class="closed"><b>הקריאה זמינה א׳–ה׳, 9:00 עד 13:00</b>מ־13:00 עדנאן במחסן – פנו אליו ישירות.</div>';document.querySelector('header h1').textContent='המחסן סגור לקריאות כרגע';throw 0}
+if(dw>4||hr<9||hr>=13){trk('closed');document.querySelector('main').innerHTML='<div class="closed"><b>הקריאה זמינה א׳–ה׳, 9:00 עד 13:00</b>מ־13:00 עדנאן במחסן – פנו אליו ישירות.</div>';document.querySelector('header h1').textContent='המחסן סגור לקריאות כרגע';throw 0}
+trk('open');
 let last=0;try{last=+sessionStorage.getItem('called')||0}catch(e){}
 const fresh=Date.now()-last<120000;
 (fresh?Promise.resolve({ok:true}):pub({title:'קוראים לך למחסן',message:'מישהו סרק את הברקוד במחסן הציוד',actions:acts}))
-.then(r=>{if(!r.ok)throw 0;try{sessionStorage.setItem('called',String(fresh?last:Date.now()))}catch(e){}
+
+.then(r=>{if(!r.ok)throw 0;if(!fresh)trk('call');try{sessionStorage.setItem('called',String(fresh?last:Date.now()))}catch(e){}
  $('stT').textContent='הקריאה נשלחה';$('stS').textContent='עובד המחסן קיבל התראה. מחכים לתשובה…'})
 .catch(()=>{$('stT').textContent='הקריאה לא נשלחה';$('stS').textContent='בדקו חיבור לאינטרנט ורעננו את הדף'});
 function show(t){$('repT').textContent=t;$('rep').classList.add('on');$('st').classList.add('done');$('stT').textContent='עובד המחסן ענה'; $('stS').textContent=''}
 try{const es=new EventSource(H+R+'/sse?since='+(fresh?Math.floor(last/1000)-2:since));
- es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.event==='message'&&m.message)show(m.message)}catch(x){}}}catch(e){}
+ es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.event==='message'&&m.message){show(m.message);trk('reply')}}catch(x){}}}catch(e){}
 const AU=new Audio('music.mp3');AU.preload='none';let mt=null,on=false;
-AU.addEventListener('ended',()=>{if(on)mt=setTimeout(()=>{if(on)AU.play().catch(()=>{})},15000)});
+AU.addEventListener('ended',()=>{trk('music_end');if(on)mt=setTimeout(()=>{if(on)AU.play().catch(()=>{})},15000)});
 function setUI(p){$('mBtn').textContent=p?'❚❚':'▶';$('mTxt').textContent=p?'מתנגן…':'מוזיקה?';$('mus').classList.toggle('on',p)}
-$('mBtn').onclick=()=>{if(on){on=false;clearTimeout(mt);AU.pause();setUI(false)}else{on=true;AU.currentTime=0;AU.play().then(()=>setUI(true)).catch(()=>{on=false;$('mTxt').textContent='לא הצלחנו לנגן'})}};
+$('mBtn').onclick=()=>{if(on){on=false;clearTimeout(mt);AU.pause();setUI(false)}else{on=true;AU.currentTime=0;AU.play().then(()=>{setUI(true);trk('music_play')}).catch(()=>{on=false;$('mTxt').textContent='לא הצלחנו לנגן'})}};
 $('send').onclick=()=>{const v=$('msg').value.trim();if(!v)return;if(!on)$('mBtn').click();$('send').disabled=true;
- pub({title:'הודעה מהמחסן',message:v,actions:acts}).then(r=>{if(!r.ok)throw 0;$('msg').value='';$('send').textContent='נשלח ✓';setTimeout(()=>{$('send').textContent='שלח';$('send').disabled=false},1500)}).catch(()=>{$('send').disabled=false;$('send').textContent='נסו שוב'})};
+ pub({title:'הודעה מהמחסן',message:v,actions:acts}).then(r=>{if(!r.ok)throw 0;trk('note');$('msg').value='';$('send').textContent='נשלח ✓';setTimeout(()=>{$('send').textContent='שלח';$('send').disabled=false},1500)}).catch(()=>{$('send').disabled=false;$('send').textContent='נסו שוב'})};
 }
 </script></body></html>
