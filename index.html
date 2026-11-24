@@ -6,7 +6,14 @@
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:17px/1.5 Rubik,system-ui,sans-serif;display:flex;flex-direction:column}
 header{background:#e3342f;color:#fff;padding:18px 20px}
-header small{opacity:.7;font-size:14px}
+header small{opacity:.85;font-size:14px;display:block;margin-top:10px}
+.lg{display:block;height:52px;width:auto;background:#fff;border-radius:10px;padding:6px 10px}
+.music{display:flex;align-items:center;gap:12px;background:#121212;color:#fff;border-radius:18px;padding:14px 16px}
+.music button{background:#fff;color:#121212;min-width:48px;padding:0 16px}
+.music span{font-size:15px;opacity:.85}
+.eq{display:flex;gap:3px;align-items:end;height:18px;margin-inline-start:auto}.eq i{width:4px;background:#e3342f;height:4px;border-radius:2px}
+.on .eq i{animation:eq 1s infinite ease-in-out}.on .eq i:nth-child(2){animation-delay:.2s}.on .eq i:nth-child(3){animation-delay:.4s}.on .eq i:nth-child(4){animation-delay:.6s}
+@keyframes eq{50%{height:18px}}
 main{flex:1;padding:24px 20px;max-width:520px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 h1{font-size:clamp(28px,8vw,40px);line-height:1.1;margin:4px 0 0}
 .status{background:var(--card);border-radius:18px;padding:22px;display:flex;gap:16px;align-items:center}
@@ -27,12 +34,13 @@ button:disabled{opacity:.5}
 .hint{font-size:14px;color:var(--mute);margin:0}
 @media(prefers-reduced-motion:reduce){.dot{animation:none}}
 </style></head><body>
-<header><small>מנשר לאמנות · מחסן ציוד</small><h1>קראנו לעובד המחסן</h1></header>
+<header><img class="lg" src="logo.png" alt="מנשר לאמנות"><small>מחסן ציוד</small><h1>קראנו לעובד המחסן</h1></header>
 <main>
 <div class="status" id="st"><span class="dot"></span><div><b id="stT">שולח קריאה…</b><span id="stS" class="hint">רגע אחד</span></div></div>
 <div class="reply" id="rep"><small>תשובה מעובד המחסן</small><p id="repT"></p></div>
 <div><label for="msg" style="font-size:18px;color:#121212;font-weight:500">מה צריך? כתבו בקצרה</label>
 <div class="row"><input id="msg" maxlength="140" placeholder="למשל: דנה – באתי להחזיר מצלמה"><button id="send">שלח</button></div></div>
+<div class="music" id="mus"><button id="mBtn" aria-label="הפעל מוזיקה">▶</button><span id="mTxt">מוזיקה בזמן ההמתנה</span><span class="eq"><i></i><i></i><i></i><i></i></span></div>
 <p class="hint">השאירו את הדף פתוח – התשובה תופיע כאן.</p>
 </main>
 <script>
@@ -56,6 +64,20 @@ const fresh=Date.now()-last<120000;
 function show(t){$('repT').textContent=t;$('rep').classList.add('on');$('st').classList.add('done');$('stT').textContent='עובד המחסן ענה'; $('stS').textContent=''}
 try{const es=new EventSource(H+R+'/sse?since='+(fresh?Math.floor(last/1000)-2:since));
  es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.event==='message'&&m.message)show(m.message)}catch(x){}}}catch(e){}
+let AC=null,MG=null,mt=null;
+function startMusic(){AC=new (window.AudioContext||window.webkitAudioContext)();MG=AC.createGain();MG.gain.value=0;MG.gain.linearRampToValueAtTime(.55,AC.currentTime+3);
+const len=AC.sampleRate*4,ir=AC.createBuffer(2,len,AC.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}
+const rv=AC.createConvolver();rv.buffer=ir;const wet=AC.createGain();wet.gain.value=.7;const dry=AC.createGain();dry.gain.value=.5;
+MG.connect(dry).connect(AC.destination);MG.connect(rv).connect(wet).connect(AC.destination);
+const f=m=>440*Math.pow(2,(m-69)/12);
+const ch=[[57,60,64,69],[53,57,60,65],[48,55,60,64],[55,59,62,67]],bass=[45,41,36,43],D=6;let bar=0;
+function pad(n,t){for(const det of[-6,6]){const o=AC.createOscillator(),g=AC.createGain(),lp=AC.createBiquadFilter();o.type='sawtooth';o.frequency.value=f(n);o.detune.value=det;lp.type='lowpass';lp.frequency.value=900;lp.Q.value=.3;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.035,t+2);g.gain.setValueAtTime(.035,t+D-1);g.gain.linearRampToValueAtTime(0,t+D+1.5);o.connect(lp).connect(g).connect(MG);o.start(t);o.stop(t+D+2)}}
+function pl(n,t,v,len){const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.value=f(n);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g).connect(MG);o.start(t);o.stop(t+len+.1)}
+function sched(){const t=AC.currentTime+.1,c=ch[bar%4];c.forEach(n=>pad(n,t));pl(bass[bar%4],t,.12,D);
+const arp=[c[0]+12,c[1]+12,c[2]+12,c[3]+12,c[2]+12,c[1]+12];arp.forEach((n,i)=>pl(n,t+i*1,.05,2.5));bar++;mt=setTimeout(sched,D*1000)}
+sched()}
+function stopMusic(){if(!AC)return;clearTimeout(mt);const a=AC;MG.gain.linearRampToValueAtTime(0,a.currentTime+1);setTimeout(()=>a.close(),1200);AC=null}
+$('mBtn').onclick=()=>{try{if(AC){stopMusic();$('mBtn').textContent='▶';$('mTxt').textContent='מוזיקה בזמן ההמתנה';$('mus').classList.remove('on')}else{startMusic();$('mBtn').textContent='❚❚';$('mTxt').textContent='מתנגן…';$('mus').classList.add('on')}}catch(e){$('mTxt').textContent='המכשיר לא תומך בנגינה'}};
 $('send').onclick=()=>{const v=$('msg').value.trim();if(!v)return;$('send').disabled=true;
  pub({title:'הודעה מהמחסן',message:v,actions:acts}).then(r=>{if(!r.ok)throw 0;$('msg').value='';$('send').textContent='נשלח ✓';setTimeout(()=>{$('send').textContent='שלח';$('send').disabled=false},1500)}).catch(()=>{$('send').disabled=false;$('send').textContent='נסו שוב'})};
 }
