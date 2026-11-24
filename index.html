@@ -56,7 +56,7 @@ const SRC=(new URLSearchParams(location.search).get('src')||'machsan').slice(0,2
 function trk(ev,x){try{fetch(H,{method:'POST',keepalive:true,body:JSON.stringify({topic:T+'-stats',priority:1,message:JSON.stringify(Object.assign({ev,src:SRC,sid},x||{}))})}).catch(()=>{})}catch(e){}}
 function pub(o){return fetch(H,{method:'POST',body:JSON.stringify(Object.assign({topic:T,priority:5,tags:['bell']},o))})}
 const nowD=new Date(),il=new Date(nowD.toLocaleString('en-US',{timeZone:'Asia/Jerusalem'})),dw=il.getDay(),hr=il.getHours();
-if(dw>4||hr<9||hr>=13){trk('closed');try{fetch(H,{method:'POST',keepalive:true,body:JSON.stringify({topic:T,priority:2,tags:['eyes'],title:'סריקה מחוץ לשעות',message:'מישהו סרק את השלט כשהמחסן סגור'})}).catch(()=>{})}catch(e){}document.querySelector('main').innerHTML='<div class="closed"><b>הקריאה זמינה א׳–ה׳, 9:00 עד 13:00</b>מ־13:00 עדנאן במחסן – פנו אליו ישירות.</div>';document.querySelector('header h1').textContent='המחסן סגור לקריאות כרגע';throw 0}
+if(dw>4||hr<9||hr>=13){trk('closed');document.querySelector('main').innerHTML='<div class="closed"><b>הקריאה זמינה א׳–ה׳, 9:00 עד 13:00</b>מ־13:00 עדנאן במחסן – פנו אליו ישירות.</div>';document.querySelector('header h1').textContent='המחסן סגור לקריאות כרגע';throw 0}
 trk('open');
 let last=0;try{last=+sessionStorage.getItem('called')||0}catch(e){}
 const fresh=Date.now()-last<120000;
