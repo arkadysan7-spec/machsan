@@ -65,7 +65,7 @@ function show(t){$('repT').textContent=t;$('rep').classList.add('on');$('st').cl
 try{const es=new EventSource(H+R+'/sse?since='+(fresh?Math.floor(last/1000)-2:since));
  es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.event==='message'&&m.message)show(m.message)}catch(x){}}}catch(e){}
 let AC=null,MG=null,mt=null;
-function startMusic(){AC=new (window.AudioContext||window.webkitAudioContext)();MG=AC.createGain();MG.gain.value=0;MG.gain.linearRampToValueAtTime(.55,AC.currentTime+3);
+function startMusic(){AC=new (window.AudioContext||window.webkitAudioContext)();MG=AC.createGain();MG.gain.value=0;MG.gain.linearRampToValueAtTime(4.5,AC.currentTime+3);
 const len=AC.sampleRate*4,ir=AC.createBuffer(2,len,AC.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}
 const rv=AC.createConvolver();rv.buffer=ir;const wet=AC.createGain();wet.gain.value=.7;const dry=AC.createGain();dry.gain.value=.5;
 MG.connect(dry).connect(AC.destination);MG.connect(rv).connect(wet).connect(AC.destination);
